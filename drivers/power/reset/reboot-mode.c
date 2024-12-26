@@ -51,9 +51,6 @@ static int reboot_mode_notify(struct notifier_block *this,
 
 	if (cmd) {
 		reason = kmalloc(MAX_REBOOT_REASON_LEN, GFP_KERNEL);
-		if (!reason)
-			return -ENOMEM;
-
 		strscpy(reason, (char *)cmd, MAX_REBOOT_REASON_LEN);
 	}
 

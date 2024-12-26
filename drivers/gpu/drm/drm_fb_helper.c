@@ -683,21 +683,22 @@ static void drm_fb_helper_damage(struct fb_info *info, u32 x, u32 y,
 /**
  * drm_fb_helper_deferred_io() - fbdev deferred_io callback function
  * @info: fb_info struct pointer
- * @pagereflist: list of mmap framebuffer pages that have to be flushed
+ * @pagelist: list of mmap framebuffer pages that have to be flushed
  *
  * This function is used as the &fb_deferred_io.deferred_io
  * callback function for flushing the fbdev mmap writes.
  */
-void drm_fb_helper_deferred_io(struct fb_info *info, struct list_head *pagereflist)
+void drm_fb_helper_deferred_io(struct fb_info *info,
+			       struct list_head *pagelist)
 {
 	unsigned long start, end, min, max;
-	struct fb_deferred_io_pageref *pageref;
+	struct page *page;
 	u32 y1, y2;
 
 	min = ULONG_MAX;
 	max = 0;
-	list_for_each_entry(pageref, pagereflist, list) {
-		start = pageref->offset;
+	list_for_each_entry(page, pagelist, lru) {
+		start = page->index << PAGE_SHIFT;
 		end = start + PAGE_SIZE - 1;
 		min = min(min, start);
 		max = max(max, end);

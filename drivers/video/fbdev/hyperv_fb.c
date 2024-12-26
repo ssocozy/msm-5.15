@@ -420,10 +420,11 @@ static void hvfb_docopy(struct hvfb_par *par,
 }
 
 /* Deferred IO callback */
-static void synthvid_deferred_io(struct fb_info *p, struct list_head *pagereflist)
+static void synthvid_deferred_io(struct fb_info *p,
+				 struct list_head *pagelist)
 {
 	struct hvfb_par *par = p->par;
-	struct fb_deferred_io_pageref *pageref;
+	struct page *page;
 	unsigned long start, end;
 	int y1, y2, miny, maxy;
 
@@ -436,8 +437,7 @@ static void synthvid_deferred_io(struct fb_info *p, struct list_head *pagereflis
 	 * in synthvid_update function by clamping the y2
 	 * value to yres.
 	 */
-	list_for_each_entry(pageref, pagereflist, list) {
-		struct page *page = pageref->page;
+	list_for_each_entry(page, pagelist, lru) {
 		start = page->index << PAGE_SHIFT;
 		end = start + PAGE_SIZE - 1;
 		y1 = start / p->fix.line_length;

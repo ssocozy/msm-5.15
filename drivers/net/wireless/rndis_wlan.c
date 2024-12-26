@@ -2845,12 +2845,7 @@ static void rndis_wlan_do_link_down_work(struct usbnet *usbdev)
 
 		deauthenticate(usbdev);
 
-#ifndef CFG80211_PROP_MULTI_LINK_SUPPORT
 		cfg80211_disconnected(usbdev->net, 0, NULL, 0, true, GFP_KERNEL);
-#else /* CFG80211_PROP_MULTI_LINK_SUPPORT */
-		cfg80211_disconnected(usbdev->net, 0, NULL, 0, true,
-				      NL80211_MLO_INVALID_LINK_ID, GFP_KERNEL);
-#endif /* CFG80211_PROP_MULTI_LINK_SUPPORT */
 	}
 
 	netif_carrier_off(usbdev->net);
@@ -3504,6 +3499,7 @@ fail:
 	cancel_delayed_work_sync(&priv->dev_poller_work);
 	cancel_delayed_work_sync(&priv->scan_work);
 	cancel_work_sync(&priv->work);
+	flush_workqueue(priv->workqueue);
 	destroy_workqueue(priv->workqueue);
 
 	wiphy_free(wiphy);
@@ -3520,6 +3516,7 @@ static void rndis_wlan_unbind(struct usbnet *usbdev, struct usb_interface *intf)
 	cancel_delayed_work_sync(&priv->dev_poller_work);
 	cancel_delayed_work_sync(&priv->scan_work);
 	cancel_work_sync(&priv->work);
+	flush_workqueue(priv->workqueue);
 	destroy_workqueue(priv->workqueue);
 
 	rndis_unbind(usbdev, intf);

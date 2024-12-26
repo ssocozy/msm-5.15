@@ -181,17 +181,17 @@ static void xenfb_refresh(struct xenfb_info *info,
 		xenfb_do_update(info, x1, y1, x2 - x1 + 1, y2 - y1 + 1);
 }
 
-static void xenfb_deferred_io(struct fb_info *fb_info, struct list_head *pagereflist)
+static void xenfb_deferred_io(struct fb_info *fb_info,
+			      struct list_head *pagelist)
 {
 	struct xenfb_info *info = fb_info->par;
-	struct fb_deferred_io_pageref *pageref;
+	struct page *page;
 	unsigned long beg, end;
 	int y1, y2, miny, maxy;
 
 	miny = INT_MAX;
 	maxy = 0;
-	list_for_each_entry(pageref, pagereflist, list) {
-		struct page *page = pageref->page;
+	list_for_each_entry(page, pagelist, lru) {
 		beg = page->index << PAGE_SHIFT;
 		end = beg + PAGE_SIZE - 1;
 		y1 = beg / fb_info->fix.line_length;

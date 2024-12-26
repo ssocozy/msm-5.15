@@ -1476,3 +1476,4 @@ static struct i2c_driver lt8711uxe2_driver = {
 module_i2c_driver(lt8711uxe2_driver);
 
 MODULE_LICENSE("GPL");
+

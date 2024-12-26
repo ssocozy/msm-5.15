@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
  * Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
- * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
@@ -59,7 +58,7 @@ const static struct {
 	{GH_CPUSYS_VM, "cpusys_vm"},
 	{GH_OEM_VM, "oemvm"},
 	{GH_ROBOTICS_VM1, "roboticsvm1"},
-	{GH_ROBOTICS_VM2, "rdcapvm"},
+	{GH_ROBOTICS_VM2, "roboticsvm2"},
 };
 
 static DEFINE_SPINLOCK(gh_sec_vm_lock);

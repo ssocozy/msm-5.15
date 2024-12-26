@@ -919,3 +919,4 @@ static struct i2c_driver ktm5030_driver = {
 module_i2c_driver(ktm5030_driver);
 
 MODULE_LICENSE("GPL");
+

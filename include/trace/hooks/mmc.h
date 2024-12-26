@@ -17,7 +17,6 @@
 struct blk_mq_queue_data;
 struct mmc_host;
 struct mmc_card;
-struct mmc_queue;
 struct sdhci_host;
 
 /*
@@ -84,10 +83,6 @@ DECLARE_RESTRICTED_HOOK(android_rvh_mmc_sd_cmdline_timing,
 DECLARE_RESTRICTED_HOOK(android_rvh_mmc_sd_dataline_timing,
 	TP_PROTO(struct mmc_card *card, int *err),
 	TP_ARGS(card, err), 1);
-
-DECLARE_HOOK(android_vh_mmc_init_queue,
-	TP_PROTO(struct mmc_queue *mq, struct mmc_card *card),
-	TP_ARGS(mq, card));
 
 #endif /* _TRACE_HOOK_MMC_H */
 /* This part must be outside protection */

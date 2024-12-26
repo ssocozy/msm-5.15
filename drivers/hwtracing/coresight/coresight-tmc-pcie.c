@@ -10,7 +10,6 @@
 #include <linux/qcom-iommu-util.h>
 #include <linux/time.h>
 #include <linux/slab.h>
-#include <linux/math64.h>
 #include "coresight-priv.h"
 #include "coresight-common.h"
 #include "coresight-tmc.h"
@@ -33,10 +32,8 @@ static void etr_pcie_close_channel(struct tmc_pcie_data *pcie_data)
 		return;
 
 	mutex_lock(&pcie_data->pcie_lock);
-	pcie_data->pcie_chan_opened = false;
-	wake_up(&pcie_data->pcie_wait_wq);
-	flush_work(&pcie_data->pcie_write_work);
 	mhi_dev_close_channel(pcie_data->out_handle);
+	pcie_data->pcie_chan_opened = false;
 	mutex_unlock(&pcie_data->pcie_lock);
 }
 
@@ -53,6 +50,8 @@ static void tmc_pcie_read_bytes(struct tmc_pcie_data *pcie_data, loff_t *ppos,
 
 	actual = tmc_etr_buf_get_data(etr_buf, *ppos, *len, bufp);
 	*len = actual;
+	if (actual == bytes || (actual + (uint32_t)*ppos) % bytes == 0)
+		atomic_dec(&pcie_data->irq_cnt);
 }
 
 static int tmc_pcie_sw_start(struct tmc_pcie_data *pcie_data)
@@ -85,6 +84,7 @@ static void tmc_pcie_sw_stop(struct tmc_pcie_data *pcie_data)
 		return;
 
 	etr_pcie_close_channel(pcie_data);
+	wake_up(&pcie_data->pcie_wait_wq);
 
 	mutex_lock(&pcie_data->pcie_lock);
 	coresight_csr_set_byte_cntr(pcie_data->csr, pcie_data->irqctrl_offset,
@@ -135,6 +135,20 @@ static void tmc_pcie_write_complete_cb(void *req)
 	kfree(req);
 }
 
+static void tmc_pcie_mhi_dev_event_cb(struct mhi_dev_client_cb_reason *reason)
+{
+	struct tmc_pcie_data *pcie_data;
+
+	pcie_data = tmc_pcie_data;
+	if (!pcie_data)
+		return;
+
+	if (reason->reason == MHI_DEV_TRE_AVAILABLE) {
+		queue_work(pcie_data->pcie_wq, &pcie_data->pcie_write_work);
+		dev_dbg(pcie_data->dev, "mhi tre available\n");
+	}
+}
+
 static void tmc_pcie_open_work_fn(struct work_struct *work)
 {
 	int ret = 0;
@@ -146,7 +160,8 @@ static void tmc_pcie_open_work_fn(struct work_struct *work)
 
 	/* Open write channel*/
 	ret = mhi_dev_open_channel(pcie_data->pcie_out_chan,
-			&pcie_data->out_handle, NULL);
+			&pcie_data->out_handle,
+			tmc_pcie_mhi_dev_event_cb);
 	if (ret < 0) {
 		dev_err(pcie_data->dev, "%s: open pcie out channel fail %d\n",
 						__func__, ret);
@@ -167,7 +182,6 @@ static void tmc_pcie_write_work_fn(struct work_struct *work)
 	size_t actual;
 	int bytes_to_write;
 	char *buf;
-	u64 remainder;
 
 	struct tmc_pcie_data *pcie_data = container_of(work,
 						struct tmc_pcie_data,
@@ -221,10 +235,7 @@ static void tmc_pcie_write_work_fn(struct work_struct *work)
 				"Write error %d\n", bytes_to_write);
 			kfree(req);
 			req = NULL;
-			if (bytes_to_write == 0)
-				continue;
-			else
-				break;
+			break;
 		}
 
 		if (pcie_data->offset + actual >= etr_buf->size)
@@ -233,10 +244,6 @@ static void tmc_pcie_write_work_fn(struct work_struct *work)
 			pcie_data->offset += actual;
 
 		pcie_data->total_size += actual;
-		div64_u64_rem(pcie_data->total_size, PCIE_BLK_SIZE, &remainder);
-		if (actual == PCIE_BLK_SIZE ||
-				remainder == 0)
-			atomic_dec(&pcie_data->irq_cnt);
 	}
 }
 
@@ -667,6 +674,7 @@ void tmc_pcie_disable(struct tmc_pcie_data *pcie_data)
 {
 	if (pcie_data->pcie_path == TMC_PCIE_SW_PATH) {
 		tmc_pcie_sw_stop(pcie_data);
+		flush_work(&pcie_data->pcie_write_work);
 		dev_info(pcie_data->dev,
 		"qdss receive total irq: %ld, send data %ld\n",
 		pcie_data->total_irq, pcie_data->total_size);

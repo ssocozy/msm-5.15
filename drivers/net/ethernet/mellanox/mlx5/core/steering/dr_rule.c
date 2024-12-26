@@ -1042,10 +1042,10 @@ static bool dr_rule_skip(enum mlx5dr_domain_type domain,
 		return false;
 
 	if (mask->misc.source_port) {
-		if (rx && value->misc.source_port != MLX5_VPORT_UPLINK)
+		if (rx && value->misc.source_port != WIRE_PORT)
 			return true;
 
-		if (!rx && value->misc.source_port == MLX5_VPORT_UPLINK)
+		if (!rx && value->misc.source_port == WIRE_PORT)
 			return true;
 	}
 
